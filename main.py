@@ -7,6 +7,7 @@ import time
 import datetime
 import pickle
 import logging
+import sys
 
 URL_TELEGRAM = "https://api.telegram.org/bot"
 TOKEN = "284065983:AAGiyvMiLJRg0Q-g8ke-nZmG0T-rjEF3j_A"
@@ -89,6 +90,9 @@ def read_quotes(*_):
 
 
 def dump_users(*_):
+    global last_dumped_time
+    last_dumped_time = datetime.datetime.now()
+
     dump("dump users")
     with open("users.txt", "wb") as u:
         pickle.dump(existing_chats, u)
@@ -98,14 +102,23 @@ def dump_users(*_):
 
 
 def load_users(*_):
+    global existing_chats
+    global motivated_chats
+    global last_sent_time
+    global last_update_id
+
+    dump("load_users")
     try:
         with open("users.txt", "rb") as u:
-            pickle.load(existing_chats, u)
-            pickle.load(motivated_chats, u)
-            pickle.load(last_sent_time, u)
-            pickle.load(last_update_id, u)
-    except:
+            existing_chats = pickle.load(u)
+            motivated_chats = pickle.load(u)
+            last_sent_time = pickle.load(u)
+            last_update_id = pickle.load(u)
+
+            dump(existing_chats)
+    except Exception as e:
         dump("users.txt doesn't exist")
+        dump(e)
 
 
 def setup_logger():
@@ -120,6 +133,7 @@ def setup_logger():
     logger.addHandler(file_handler)
 
     dump = logger.debug
+
 
 existing_chats = set()
 motivated_chats = set()
@@ -137,32 +151,35 @@ commands = {"/start": start_cmd,
 quotes = []
 
 if __name__ == "__main__":
-    setup_logger()
-    read_quotes()
-    load_users()
+    try:
+        setup_logger()
+        read_quotes()
+        load_users()
 
-    while True:
-        json_response = get_updates(last_update_id)
+        while True:
+            json_response = get_updates(last_update_id)
 
-        for entry in json_response:
-            dump("entry: {}".format(entry))
-            msg = entry["message"]
-            cmd = msg["text"]
-            g_chat_id = msg["chat"]["id"]
-            last_update_id = max(last_update_id, entry["update_id"] + 1)
-            if cmd in commands:
-                dump("command, chat_id: {} {}".format(cmd, g_chat_id))
-                commands[cmd](g_chat_id)
+            for entry in json_response:
+                dump("entry: {}".format(entry))
+                msg = entry["message"]
+                cmd = msg["text"]
+                g_chat_id = msg["chat"]["id"]
+                last_update_id = max(last_update_id, entry["update_id"] + 1)
+                if cmd in commands:
+                    dump("command, chat_id: {} {}".format(cmd, g_chat_id))
+                    commands[cmd](g_chat_id)
 
-        time.sleep(1)
+            time.sleep(1)
 
-        cur = datetime.datetime.now()
-        for chat in motivated_chats:
-            if chat in last_sent_time:
-                if cur - last_sent_time[chat] > datetime.timedelta(seconds=3):
+            cur = datetime.datetime.now()
+            for chat in motivated_chats:
+                if chat in last_sent_time:
+                    if cur - last_sent_time[chat] > datetime.timedelta(seconds=3):
+                        next_cmd(g_chat_id)
+                else:
                     next_cmd(g_chat_id)
-            else:
-                next_cmd(g_chat_id)
 
-        if cur - last_dumped_time > datetime.timedelta(minutes=1):
-            dump_users()
+            if cur - last_dumped_time > datetime.timedelta(minutes=1):
+                dump_users()
+    except:
+        dump_users()
