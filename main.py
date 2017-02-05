@@ -156,12 +156,12 @@ commands = {"/start": start_cmd,
 quotes = []
 
 if __name__ == "__main__":
-    try:
-        setup_logger()
-        read_quotes()
-        load_users()
+    setup_logger()
+    read_quotes()
+    load_users()
 
-        while True:
+    while True:
+        try:
             json_response = get_updates(last_update_id)
 
             for entry in json_response:
@@ -187,6 +187,6 @@ if __name__ == "__main__":
 
             if cur - last_dumped_time > datetime.timedelta(minutes=1):
                 dump_users()
-    except:
-        dump_users()
-        raise
+        except Exception as e:
+            dump_users()
+            dump(e)
