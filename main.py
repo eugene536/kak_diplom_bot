@@ -139,6 +139,15 @@ def setup_logger():
     dump = logger.debug
 
 
+def duplicate_commands_with_bot_name():
+    global commands
+    new_commands = {}
+    for name, cmd in commands.items():
+        new_commands[name + "@" + bot_name] = cmd
+
+    commands.update(new_commands)
+
+
 existing_chats = set()
 motivated_chats = set()
 last_update_id = 0
@@ -152,6 +161,7 @@ commands = {"/start": start_cmd,
             "/stop_motivate": stop_motivate_cmd,
             "/upd_quotes": read_quotes,
             "/dump_users": dump_users}
+bot_name = "kak_diplom_bot"
 
 quotes = []
 
@@ -159,6 +169,7 @@ if __name__ == "__main__":
     setup_logger()
     read_quotes()
     load_users()
+    duplicate_commands_with_bot_name()
 
     while True:
         try:
@@ -171,6 +182,7 @@ if __name__ == "__main__":
                     cmd = msg["text"]
                     g_chat_id = msg["chat"]["id"]
                     last_update_id = max(last_update_id, entry["update_id"] + 1)
+
                     if cmd in commands:
                         dump("command, chat_id: {} {}".format(cmd, g_chat_id))
                         commands[cmd](g_chat_id)
