@@ -84,6 +84,7 @@ def stop_motivate_cmd(chat_id):
 
 def read_quotes(*_):
     global quotes
+    dump("read_quotes")
     with open("quotes.txt") as q:
         whole_file = q.read()
         quotes = whole_file.split("--------")
@@ -99,6 +100,7 @@ def dump_users(*_):
         pickle.dump(motivated_chats, u)
         pickle.dump(last_sent_time, u)
         pickle.dump(last_update_id, u)
+        pickle.dump(g_chat_id, u)
 
 
 def load_users(*_):
@@ -106,6 +108,7 @@ def load_users(*_):
     global motivated_chats
     global last_sent_time
     global last_update_id
+    global g_chat_id
 
     dump("load_users")
     try:
@@ -114,6 +117,7 @@ def load_users(*_):
             motivated_chats = pickle.load(u)
             last_sent_time = pickle.load(u)
             last_update_id = pickle.load(u)
+            g_chat_id = pickle.load(u)
 
             dump(existing_chats)
     except Exception as e:
@@ -138,6 +142,7 @@ def setup_logger():
 existing_chats = set()
 motivated_chats = set()
 last_update_id = 0
+g_chat_id = 0
 last_sent_time = {}
 last_dumped_time = datetime.datetime.now()
 commands = {"/start": start_cmd,
@@ -160,14 +165,15 @@ if __name__ == "__main__":
             json_response = get_updates(last_update_id)
 
             for entry in json_response:
-                dump("entry: {}".format(entry))
                 msg = entry["message"]
-                cmd = msg["text"]
-                g_chat_id = msg["chat"]["id"]
-                last_update_id = max(last_update_id, entry["update_id"] + 1)
-                if cmd in commands:
-                    dump("command, chat_id: {} {}".format(cmd, g_chat_id))
-                    commands[cmd](g_chat_id)
+                if "text" in msg:
+                    dump("entry: {}".format(entry))
+                    cmd = msg["text"]
+                    g_chat_id = msg["chat"]["id"]
+                    last_update_id = max(last_update_id, entry["update_id"] + 1)
+                    if cmd in commands:
+                        dump("command, chat_id: {} {}".format(cmd, g_chat_id))
+                        commands[cmd](g_chat_id)
 
             time.sleep(1)
 
@@ -183,3 +189,4 @@ if __name__ == "__main__":
                 dump_users()
     except:
         dump_users()
+        raise
