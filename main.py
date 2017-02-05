@@ -11,6 +11,7 @@ import sys
 
 URL_TELEGRAM = "https://api.telegram.org/bot"
 TOKEN = "284065983:AAGiyvMiLJRg0Q-g8ke-nZmG0T-rjEF3j_A"
+BOT_NAME = "kak_diplom_bot"
 
 
 def create_request_url(request):
@@ -51,11 +52,13 @@ def send(chat_id, text):
 def start_cmd(chat_id):
     dump("in start_cmd")
     global existing_chats
+    send(chat_id, "Oh Yes")
     existing_chats.add(chat_id)
 
 
 def stop_cmd(chat_id):
     dump("in stop_cmd")
+    send(chat_id, "No, please :(")
     global existing_chats
     existing_chats.remove(chat_id)
 
@@ -78,6 +81,8 @@ def motivate_cmd(chat_id):
 
 
 def stop_motivate_cmd(chat_id):
+    send(chat_id, "No, please!")
+
     if chat_id in existing_chats:
         motivated_chats.remove(chat_id)
 
@@ -143,27 +148,54 @@ def duplicate_commands_with_bot_name():
     global commands
     new_commands = {}
     for name, cmd in commands.items():
-        new_commands[name + "@" + bot_name] = cmd
+        new_commands[name + "@" + BOT_NAME] = cmd
 
     commands.update(new_commands)
 
 
+def shut_down(chat_id, *_):
+    global proceed
+
+    send(chat_id, "shut down :(")
+
+    dump("shut_donw")
+    dump_users()
+    proceed = False
+
+
+def add_quote(chat_id, text):
+    global quotes
+
+    dump("add_quote: {}".format(text))
+    quotes.append(text)
+
+    with open("quotes.txt", "a") as quotes_txt:
+        quotes_txt.write("--------\n")
+        quotes_txt.write(text)
+        quotes_txt.write("\n")
+
+    send(chat_id, "successfully add quote")
+
+
+proceed = True
+quotes = []
 existing_chats = set()
 motivated_chats = set()
 last_update_id = 0
 g_chat_id = 0
 last_sent_time = {}
 last_dumped_time = datetime.datetime.now()
+
 commands = {"/start": start_cmd,
             "/stop": stop_cmd,
             "/next": next_cmd,
             "/motivate": motivate_cmd,
             "/stop_motivate": stop_motivate_cmd,
             "/upd_quotes": read_quotes,
-            "/dump_users": dump_users}
-bot_name = "kak_diplom_bot"
+            "/dump_users": dump_users,
+            "/shut_down": shut_down}
 
-quotes = []
+prefix_commands = {"/add_quote": add_quote}
 
 if __name__ == "__main__":
     setup_logger()
@@ -171,7 +203,7 @@ if __name__ == "__main__":
     load_users()
     duplicate_commands_with_bot_name()
 
-    while True:
+    while proceed:
         try:
             json_response = get_updates(last_update_id)
 
@@ -179,13 +211,19 @@ if __name__ == "__main__":
                 msg = entry["message"]
                 if "text" in msg:
                     dump("entry: {}".format(entry))
-                    cmd = msg["text"]
+                    text = msg["text"]
                     g_chat_id = msg["chat"]["id"]
                     last_update_id = max(last_update_id, entry["update_id"] + 1)
 
-                    if cmd in commands:
-                        dump("command, chat_id: {} {}".format(cmd, g_chat_id))
-                        commands[cmd](g_chat_id)
+                    if text in commands:
+                        dump("command, chat_id: {} {}".format(text, g_chat_id))
+                        commands[text](g_chat_id)
+                    else:
+                        for pref_cmd, fun_cmd in prefix_commands.items():
+                            n = len(pref_cmd)
+                            if pref_cmd == text[:n]:
+                                fun_cmd(g_chat_id, text[n + 1:])
+                                break
 
             time.sleep(1)
 
