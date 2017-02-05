@@ -56,35 +56,42 @@ def start_cmd(chat_id):
     existing_chats.add(chat_id)
 
 
+def stop_motivate_cmd(chat_id):
+    send(chat_id, "No, please!")
+
+    motivated_chats.remove(chat_id)
+
+
 def stop_cmd(chat_id):
+    global existing_chats
+
     dump("in stop_cmd")
     send(chat_id, "No, please :(")
-    global existing_chats
+
     existing_chats.remove(chat_id)
+    motivated_chats.remove(chat_id)
 
     if chat_id in last_sent_time:
         del last_sent_time[chat_id]
 
 
 def next_cmd(chat_id):
+    global g_motivation_num
+    global quotes
+
     dump("in next_cmd")
     if chat_id in existing_chats:
-        n = len(quotes)
-        q_num = random.randint(0, n - 1)
-        send(chat_id, quotes[q_num])
+        send(chat_id, quotes[g_motivation_num])
+        g_motivation_num += 1
+        if g_motivation_num == len(quotes):
+            g_motivation_num = 0
+            random.shuffle(quotes)
 
 
 def motivate_cmd(chat_id):
     global motivated_chats
     if chat_id in existing_chats:
         motivated_chats.add(chat_id)
-
-
-def stop_motivate_cmd(chat_id):
-    send(chat_id, "No, please!")
-
-    if chat_id in existing_chats:
-        motivated_chats.remove(chat_id)
 
 
 def read_quotes(*_):
@@ -156,6 +163,8 @@ def duplicate_commands_with_bot_name():
 def shut_down(chat_id, *_):
     global proceed
 
+    # for deleting recent shut_down request
+    unused = get_updates(last_update_id)
     send(chat_id, "shut down :(")
 
     dump("shut_donw")
@@ -183,6 +192,7 @@ existing_chats = set()
 motivated_chats = set()
 last_update_id = 0
 g_chat_id = 0
+g_motivation_num = 0
 last_sent_time = {}
 last_dumped_time = datetime.datetime.now()
 
