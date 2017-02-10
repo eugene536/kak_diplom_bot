@@ -45,8 +45,8 @@ def send(chat_id, text):
     if not json_response["ok"]:
         dump("so sorry, response: {}".format(json_response))
 
-    if chat_id in motivated_chats:
-        last_sent_time[chat_id] = datetime.datetime.now()
+    # if chat_id in motivated_chats:
+    last_sent_time[chat_id] = datetime.datetime.now()
 
 
 def start_cmd(chat_id):
@@ -241,9 +241,18 @@ if __name__ == "__main__":
             for chat in motivated_chats:
                 if chat in last_sent_time:
                     if cur - last_sent_time[chat] > datetime.timedelta(seconds=3):
-                        next_cmd(g_chat_id)
+                        next_cmd(chat)
                 else:
-                    next_cmd(g_chat_id)
+                    next_cmd(chat)
+
+            for chat in existing_chats:
+                if chat in last_sent_time:
+                    if cur - last_sent_time[chat] > datetime.timedelta(days=1):
+                        dump("kak diplom to chat: {}".format(chat))
+                        send(chat, "Как диплом? :\\")
+                else:
+                    dump("kak diplom to chat: {}".format(chat))
+                    send(chat, "Как диплом? :\\")
 
             if cur - last_dumped_time > datetime.timedelta(minutes=1):
                 dump_users()
