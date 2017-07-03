@@ -39,14 +39,37 @@ def send(chat_id, text):
     dump("send to chat_id = {}, text = {}".format(chat_id, text))
     payload = {"chat_id": chat_id, "text": text}
     response = requests.post(send_url, json=payload)
-    dump("SEND: {}".format(response.text))
-
     json_response = json.loads(response.text)
-    if not json_response["ok"]:
-        dump("so sorry, response: {}".format(json_response))
 
-    # if chat_id in motivated_chats:
-    last_sent_time[chat_id] = datetime.datetime.now()
+    if "error_code" in json_response:
+        dump("error SEND: {}".format(response.text))
+
+        try:
+            existing_chats.remove(chat_id)
+        except:
+            pass
+
+        try:
+            del last_sent_time[chat_id]
+        except:
+            pass
+
+        try:
+            motivated_chats.remove(chat_id)
+        except:
+            pass
+
+        return -1
+    else:
+        dump("SEND: {}".format(response.text))
+
+        if not json_response["ok"]:
+            dump("so sorry, response: {}".format(json_response))
+
+        # if chat_id in motivated_chats:
+        last_sent_time[chat_id] = datetime.datetime.now()
+
+        return 0
 
 
 def start_cmd(chat_id):
@@ -82,6 +105,7 @@ def next_cmd(chat_id):
     dump("in next_cmd")
     if chat_id in existing_chats:
         send(chat_id, quotes[g_motivation_num])
+        # send(chat_id, quotes[-1])
         g_motivation_num += 1
         if g_motivation_num == len(quotes):
             g_motivation_num = 0
@@ -247,12 +271,14 @@ if __name__ == "__main__":
 
             for chat in existing_chats:
                 if chat in last_sent_time:
-                    if cur - last_sent_time[chat] > datetime.timedelta(days=1):
+                    if cur - last_sent_time[chat] > datetime.timedelta(days=1) + datetime.timedelta(hours=random.randint(0, 7)):
                         dump("kak diplom to chat: {}".format(chat))
-                        send(chat, "Как диплом? :\\")
+                        if send(chat, "Как диплом? :\\") == -1:
+                            dump("delete1 this chat {}".format(chat))
                 else:
                     dump("kak diplom to chat: {}".format(chat))
-                    send(chat, "Как диплом? :\\")
+                    if send(chat, "Как диплом? :\\") == -1:
+                        dump("delete2 this chat {}".format(chat))
 
             if cur - last_dumped_time > datetime.timedelta(minutes=1):
                 dump_users()
